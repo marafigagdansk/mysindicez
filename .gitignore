@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Banco de dados (para não subir dados de teste/pessoais)
+*.db
+*.sqlite3
+
+# Uploads / Arquivos gerados
+comprovantes/
+relatorios/
+*.pdf
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build (Flet / PyInstaller)
+build/
+dist/
+*.spec
