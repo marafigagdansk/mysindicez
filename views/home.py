@@ -172,6 +172,13 @@ def build_home(page: ft.Page) -> ft.Column:
             # Subtítulo (Data e Descrição)
             descricao = t["descricao"] or "Transferência genérica"
             
+            # Converte YYYY-MM-DD para DD/MM/YYYY para exibição
+            try:
+                a, m, d = t["data"].split("-")
+                data_exibicao = f"{d}/{m}/{a}"
+            except:
+                data_exibicao = t["data"]
+
             card_mini = ft.Container(
                 content=ft.Row(
                     [
@@ -179,7 +186,7 @@ def build_home(page: ft.Page) -> ft.Column:
                         ft.Column(
                             [
                                 ft.Text(descricao, size=14, weight=ft.FontWeight.W_600, color=CORES["texto"], overflow=ft.TextOverflow.ELLIPSIS),
-                                ft.Text(t["data"], size=11, color=CORES["texto_secundario"]),
+                                ft.Text(data_exibicao, size=11, color=CORES["texto_secundario"]),
                             ],
                             spacing=1,
                             expand=True,

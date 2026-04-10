@@ -91,42 +91,12 @@ def view_moradores(page: ft.Page) -> ft.Column:
     return build_moradores(page)
 
 
+from views.relatorios import build_relatorios
+
 def view_relatorios(page: ft.Page) -> ft.Column:
-    """Tela de Relatórios — geração de PDF mensal."""
-    return ft.Column(
-        controls=[
-            criar_card(
-                ft.Column([
-                    ft.Icon(ft.Icons.DESCRIPTION, size=40, color=CORES["secundaria_light"]),
-                    ft.Text(
-                        "Relatórios",
-                        size=18,
-                        weight=ft.FontWeight.BOLD,
-                        color=CORES["texto"],
-                    ),
-                    ft.Text(
-                        "Gere relatórios mensais em PDF das movimentações.",
-                        size=13,
-                        color=CORES["texto_secundario"],
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=8,
-                ),
-                padding=24,
-            ),
-            ft.Container(height=8),
-            ft.Text(
-                "🚧 Em construção — Passo 6",
-                size=14, color=CORES["aviso"], text_align=ft.TextAlign.CENTER,
-            ),
-        ],
-        spacing=8,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        scroll=ft.ScrollMode.AUTO,
-        expand=True,
-    )
+    """Tela de Relatórios PDF — Passo 6."""
+    return build_relatorios(page)
+
 
 
 def view_configuracao(page: ft.Page) -> ft.Column:

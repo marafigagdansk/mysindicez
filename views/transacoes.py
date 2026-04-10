@@ -74,7 +74,8 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     campo_tipo = ft.Dropdown(
         label="Sinal / Tipo",
         options=[
-            ft.dropdown.Option("entrada", "Entrada (Receitas)"),
+            ft.dropdown.Option("entrada_mensalidade", "Mensalidade (Receita)"),
+            ft.dropdown.Option("entrada", "Outras Entradas (Receitas)"),
             ft.dropdown.Option("saida", "Saída (Despesas)"),
         ],
         border_radius=10,
@@ -103,11 +104,33 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         expand=True,
     )
 
-    # Hoje por padrão
-    hoje_str = datetime.now().strftime("%Y-%m-%d")
+    def formatar_mascara_data(e):
+        texto = e.control.value
+        # Filtra deixando apenas os dígitos numéricos
+        somente_numeros = "".join(filter(str.isdigit, texto))
+        
+        if len(somente_numeros) > 8:
+            somente_numeros = somente_numeros[:8]
+            
+        mascarado = ""
+        if len(somente_numeros) > 0:
+            mascarado = somente_numeros[:2]
+        if len(somente_numeros) > 2:
+            mascarado += "/" + somente_numeros[2:4]
+        if len(somente_numeros) > 4:
+            mascarado += "/" + somente_numeros[4:]
+            
+        e.control.value = mascarado
+        page.update()
+
+    # Hoje por padrão formatado no padrão brasileiro
+    hoje_str = datetime.now().strftime("%d/%m/%Y")
+    
     campo_data = ft.TextField(
-        label="Data (YYYY-MM-DD)",
+        label="Data (DD/MM/AAAA)",
         value=hoje_str,
+        keyboard_type=ft.KeyboardType.NUMBER,
+        on_change=formatar_mascara_data,
         border_radius=10,
         border_color=CORES["borda"],
         focused_border_color=CORES["primaria_light"],
@@ -169,7 +192,17 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     # Função para adaptar a UI de acordo com o tipo
     def on_tipo_change(e):
-        campo_morador.visible = (campo_tipo.value == "entrada")
+        if campo_tipo.value == "entrada_mensalidade":
+            campo_morador.visible = True
+            campo_morador.label = "Vincular a um Morador (Obrigatório)"
+            if not campo_descricao.value:
+                campo_descricao.value = "Mensalidade"
+        elif campo_tipo.value == "entrada":
+            campo_morador.visible = True
+            campo_morador.label = "Vincular a um Morador (Opcional)"
+        else:
+            campo_morador.visible = False
+            
         page.update()
     
     campo_tipo.on_change = on_tipo_change
@@ -276,8 +309,15 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                 )
             )
 
+            # Converte YYYY-MM-DD para DD/MM/YYYY para exibição
+            try:
+                a, m, d = t["data"].split("-")
+                data_exibicao = f"{d}/{m}/{a}"
+            except:
+                data_exibicao = t["data"]
+
             # Subtítulo (Data e Morador se houver)
-            sub_partes = [t["data"]]
+            sub_partes = [data_exibicao]
             if t["morador_nome"]:
                 sub_partes.append(f"{t['morador_nome']} (Un. {t['morador_unidade']})")
 
@@ -324,21 +364,29 @@ def build_transacoes(page: ft.Page) -> ft.Column:
             lista_transacoes.controls.append(card)
 
     def salvar_transacao(e):
-        tipo = campo_tipo.value
+        tipo_raw = campo_tipo.value
+        tipo_banco = "entrada" if tipo_raw and tipo_raw.startswith("entrada") else "saida"
+
         texto_valor = (campo_valor.value or "").strip()
         descricao = (campo_descricao.value or "").strip()
         data_str = (campo_data.value or "").strip()
         morador_id = None
 
-        if tipo == "entrada" and campo_morador.value:
+        if tipo_banco == "entrada" and campo_morador.value:
             morador_id = int(campo_morador.value)
 
         tem_erro = False
         campo_tipo.error_text = None
         campo_valor.error_text = None
+        campo_morador.error_text = None
 
-        if not tipo:
+        if not tipo_raw:
             campo_tipo.error_text = "Selecione o tipo."
+            tem_erro = True
+            
+        if tipo_raw == "entrada_mensalidade" and not campo_morador.value:
+            campo_morador.error_text = "Morador obrigatório."
+            campo_morador.visible = True
             tem_erro = True
         
         try:
@@ -350,6 +398,16 @@ def build_transacoes(page: ft.Page) -> ft.Column:
             tem_erro = True
         
         if tem_erro:
+            page.update()
+            return
+
+        # Converte de DD/MM/YYYY para YYYY-MM-DD antes de botar no banco
+        import re
+        if re.match(r"^\d{2}/\d{2}/\d{4}$", data_str):
+            dia, mes, ano = data_str.split("/")
+            data_db = f"{ano}-{mes}-{dia}"
+        else:
+            campo_data.error_text = "Data inválida. Use DD/MM/AAAA."
             page.update()
             return
 
@@ -371,10 +429,10 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                     caminho_final = None  # Reseta para salvar a transacao sem path quebrado em caso de erro no shutil
 
         db.inserir_transacao(
-            tipo=tipo,
+            tipo=tipo_banco,
             valor=valor,
             descricao=descricao,
-            data=data_str,
+            data=data_db,
             morador_id=morador_id,
             comprovante_path=caminho_final
         )
