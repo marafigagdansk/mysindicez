@@ -244,27 +244,84 @@ def build_configuracao(page: ft.Page, on_salvo=None) -> ft.Column:
 
             ft.Container(height=8),
 
-            # Card do formulário de edição
+            # Card do formulário de edição (Protegido por senha)
             criar_card(
                 ft.Column(
                     [
-                        ft.Text(
-                            "Definir / Atualizar Saldo",
-                            size=15,
-                            weight=ft.FontWeight.W_600,
-                            color=CORES["texto"],
+                        # Área da Senha
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    "Acesso Restrito",
+                                    size=15,
+                                    weight=ft.FontWeight.W_600,
+                                    color=CORES["texto"],
+                                ),
+                                ft.Text(
+                                    "Insira a senha mestra para modificar o saldo base.",
+                                    size=12,
+                                    color=CORES["texto_secundario"],
+                                ),
+                                ft.Container(height=4),
+                                ft.TextField(
+                                    label="Senha",
+                                    password=True,
+                                    can_reveal_password=True,
+                                    border_radius=12,
+                                    border_color=CORES["borda"],
+                                    focused_border_color=CORES["primaria_light"],
+                                    on_change=lambda e: e.control.parent.controls[4].controls[0].update() if e.control.error_text else None, # limpa erro
+                                ),
+                                ft.Container(height=4),
+                                ft.Row(
+                                    [
+                                        ft.FilledButton(
+                                            "Desbloquear",
+                                            icon=ft.Icons.LOCK_OPEN,
+                                            on_click=lambda e: (
+                                                setattr(e.control.parent.parent.controls[3], "error_text", "Senha incorreta") or e.control.page.update()
+                                                if e.control.parent.parent.controls[3].value != "vini1612hjv"
+                                                else (
+                                                    setattr(e.control.parent.parent, "visible", False),
+                                                    setattr(e.control.parent.parent.parent.controls[1], "visible", True),
+                                                    e.control.page.update()
+                                                )
+                                            ),
+                                            style=ft.ButtonStyle(
+                                                bgcolor=CORES["secundaria"],
+                                                color=ft.Colors.WHITE,
+                                                shape=ft.RoundedRectangleBorder(radius=10),
+                                            ),
+                                            expand=True
+                                        )
+                                    ]
+                                )
+                            ],
+                            spacing=10
                         ),
-                        ft.Text(
-                            "Digite o valor em reais (ex: 1500,00)",
-                            size=12,
-                            color=CORES["texto_secundario"],
-                        ),
-                        ft.Container(height=4),
-                        campo_saldo,
-                        ft.Container(height=4),
-                        btn_salvar,
-                    ],
-                    spacing=10,
+                        # Área de Edição (Inicialmente Oculta)
+                        ft.Column(
+                            [
+                                ft.Text(
+                                    "Definir / Atualizar Saldo",
+                                    size=15,
+                                    weight=ft.FontWeight.W_600,
+                                    color=CORES["texto"],
+                                ),
+                                ft.Text(
+                                    "Digite o valor em reais (ex: 1500,00)",
+                                    size=12,
+                                    color=CORES["texto_secundario"],
+                                ),
+                                ft.Container(height=4),
+                                campo_saldo,
+                                ft.Container(height=4),
+                                btn_salvar,
+                            ],
+                            spacing=10,
+                            visible=False,
+                        )
+                    ]
                 ),
                 padding=20,
             ),

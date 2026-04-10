@@ -70,6 +70,22 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     if not os.path.exists(COMPROVANTES_DIR):
         os.makedirs(COMPROVANTES_DIR)
 
+    # Função para adaptar a UI de acordo com o tipo
+    def on_tipo_change(e):
+        valor_selecionado = e.control.value
+        if valor_selecionado == "entrada_mensalidade":
+            campo_morador.visible = True
+            campo_morador.label = "Vincular a um Morador (Obrigatório)"
+            if not campo_descricao.value:
+                campo_descricao.value = "Mensalidade"
+        elif valor_selecionado == "entrada":
+            campo_morador.visible = True
+            campo_morador.label = "Vincular a um Morador (Opcional)"
+        else:
+            campo_morador.visible = False
+            
+        page.update()
+
     # --- Controles do Formulário ---
     campo_tipo = ft.Dropdown(
         label="Sinal / Tipo",
@@ -83,6 +99,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         focused_border_color=CORES["primaria_light"],
         expand=True,
     )
+    campo_tipo.on_change = on_tipo_change
 
     campo_valor = ft.TextField(
         label="Valor",
@@ -189,23 +206,6 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     )
 
     lista_transacoes = ft.Column(spacing=8)
-
-    # Função para adaptar a UI de acordo com o tipo
-    def on_tipo_change(e):
-        if campo_tipo.value == "entrada_mensalidade":
-            campo_morador.visible = True
-            campo_morador.label = "Vincular a um Morador (Obrigatório)"
-            if not campo_descricao.value:
-                campo_descricao.value = "Mensalidade"
-        elif campo_tipo.value == "entrada":
-            campo_morador.visible = True
-            campo_morador.label = "Vincular a um Morador (Opcional)"
-        else:
-            campo_morador.visible = False
-            
-        page.update()
-    
-    campo_tipo.on_change = on_tipo_change
 
     def carregar_dropdown_moradores():
         campo_morador.options.clear()
@@ -386,6 +386,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
             
         if tipo_raw == "entrada_mensalidade" and not campo_morador.value:
             campo_morador.error_text = "Morador obrigatório."
+            # Garante que o campo esteja visível se houver erro
             campo_morador.visible = True
             tem_erro = True
         

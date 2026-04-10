@@ -36,9 +36,15 @@ CORES = {
 # Componentes Reutilizáveis
 # ========================================================
 
-def criar_appbar(titulo: str) -> ft.AppBar:
-    """Cria a AppBar padrão do app."""
+def criar_appbar(page: ft.Page, titulo: str) -> ft.AppBar:
+    """Cria a AppBar padrão do app com menu lateral."""
+    def open_drawer(e):
+        if page.drawer:
+            page.drawer.open = True
+            page.update()
+
     return ft.AppBar(
+        leading=ft.IconButton(ft.Icons.MENU, on_click=open_drawer, icon_color=ft.Colors.WHITE),
         title=ft.Text(
             titulo,
             size=20,
@@ -122,7 +128,7 @@ def carregar_view_externa(page, nome: str):
     }
     if nome in mapa and _conteudo_ref:
         titulo, view_func = mapa[nome]
-        page.appbar = criar_appbar(titulo)
+        page.appbar = criar_appbar(page, titulo)
         _conteudo_ref.content = view_func(page)
         page.update()
 
@@ -158,7 +164,7 @@ def main(page: ft.Page):
             3: ("Relatorios", view_relatorios),
         }
         titulo, view_func = views.get(indice, ("Home", view_home))
-        page.appbar = criar_appbar(titulo)
+        page.appbar = criar_appbar(page, titulo)
         conteudo_principal.content = view_func(page)
         page.update()
 
@@ -200,8 +206,29 @@ def main(page: ft.Page):
         ],
     )
 
+    # --- Navigation Drawer Lateral ---
+    def on_drawer_change(e):
+        # Desmarca o drawer para ficar limpo visualmente no re-open
+        e.control.selected_index = None
+        # O índice 0 corresponde a "Configurações"
+        carregar_view_externa(page, "configuracao")
+        page.drawer.open = False
+        page.update()
+
+    page.drawer = ft.NavigationDrawer(
+        on_change=on_drawer_change,
+        controls=[
+            ft.Container(height=12),
+            ft.NavigationDrawerDestination(
+                label="Configurações",
+                icon=ft.Icons.SETTINGS_OUTLINED,
+                selected_icon=ft.Icons.SETTINGS,
+            ),
+        ]
+    )
+
     # --- Layout principal ---
-    page.appbar = criar_appbar("Home")
+    page.appbar = criar_appbar(page, "Home")
     conteudo_principal.content = view_home(page)
     page.navigation_bar = nav_bar
 
