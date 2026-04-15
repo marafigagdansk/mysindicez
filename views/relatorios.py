@@ -182,9 +182,16 @@ def build_relatorios(page: ft.Page) -> ft.Column:
 
             def abrir_pdf(e, path=caminho_f):
                 try:
-                    os.startfile(path)
+                    if hasattr(os, 'startfile'):
+                        os.startfile(path)
+                    else:
+                        import subprocess
+                        if os.name == "mac":
+                            subprocess.call(["open", path])
+                        else:
+                            subprocess.call(["xdg-open", path])
                 except Exception as ex:
-                    criar_snackbar(page, f"Não foi possível abrir: {ex}", erro=True)
+                    criar_snackbar(page, f"Aviso: Abertura automática não suportada nesta plataforma. Salvo em: {path}", erro=False)
 
             # Extrai mês/ano do nome do arquivo: relatorio_MM_YYYY.pdf
             try:
@@ -233,7 +240,14 @@ def build_relatorios(page: ft.Page) -> ft.Column:
 
             # Abre o PDF automaticamente
             try:
-                os.startfile(caminho)
+                if hasattr(os, 'startfile'):
+                    os.startfile(caminho)
+                else:
+                    import subprocess
+                    if os.name == "mac":
+                        subprocess.call(["open", caminho])
+                    else:
+                        subprocess.call(["xdg-open", caminho])
             except Exception:
                 pass
 
@@ -246,7 +260,7 @@ def build_relatorios(page: ft.Page) -> ft.Column:
         page.update()
 
     btn_gerar = ft.FilledButton(
-        content="Gerar Relatório PDF",
+        text="Gerar Relatório PDF",
         icon=ft.Icons.PICTURE_AS_PDF,
         on_click=gerar_pdf,
         style=ft.ButtonStyle(

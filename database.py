@@ -7,9 +7,52 @@ import sqlite3
 import os
 from datetime import datetime
 
+# Obter diretório seguro (cross-platform, compativel com Android Flet)
+def get_safe_data_dir():
+    """Retorna um diretório seguro para gravação, compatível com Windows, macOS, Linux e Android Flet."""
+    
+    # Lista de possíveis bases para o diretório de dados do app
+    potential_bases = [
+        os.environ.get("FLET_USER_DATA_DIR"),  # Geralmente definido pelo Flet no Android
+        os.environ.get("APPDATA"),              # Windows
+        os.environ.get("XDG_DATA_HOME"),         # Linux
+        os.path.expanduser("~") if os.name != "nt" else None,
+        os.path.join(os.path.expanduser("~"), "AppData", "Roaming") if os.name == "nt" else None,
+        os.getcwd(),                             # Último recurso: pasta atual
+    ]
 
-# Caminho do banco de dados (mesmo diretório do script)
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "condominio.db")
+    for base in potential_bases:
+        if not base:
+            continue
+            
+        app_dir = os.path.join(base, "MySindiceZ")
+        
+        try:
+            # Tenta criar a pasta se não existir
+            os.makedirs(app_dir, exist_ok=True)
+            
+            # Teste de escrita: garante que realmente temos permissão na pasta
+            test_file = os.path.join(app_dir, ".write_test")
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.remove(test_file)
+            
+            # Se chegamos aqui, o diretório é válido e gravável!
+            return app_dir
+        except:
+            # Se falhar nesse diretório, tenta o próximo da lista
+            continue
+
+    # Caso extremo: tenta na pasta onde o script está rodando
+    try:
+        app_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "MySindiceZ_data"))
+        os.makedirs(app_dir, exist_ok=True)
+        return app_dir
+    except:
+        return "." # Fallback final: diretório atual
+
+# Caminho do banco de dados (pasta de dados do app detectada em tempo de execução)
+DB_PATH = os.path.join(get_safe_data_dir(), "condominio.db")
 
 
 def get_connection():

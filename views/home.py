@@ -46,15 +46,22 @@ def formatar_brl(valor: float) -> str:
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def build_home(page: ft.Page) -> ft.Column:
+def build_home(page: ft.Page, on_config_click=None) -> ft.Column:
     """Monta a view principal do Dashboard."""
     
-    # 1. Busca os dados atuais no banco de dados SQLite
-    dados_saldo = db.calcular_saldo_atual()
-    saldo_atual = dados_saldo["saldo_atual"]
-    total_entradas = dados_saldo["total_entradas"]
-    total_saidas = dados_saldo["total_saidas"]
-    saldo_inicial = dados_saldo["saldo_inicial"]
+    # 1. Busca os dados atuais no banco de dados SQLite (com tratamento de erro resiliente)
+    try:
+        dados_saldo = db.calcular_saldo_atual()
+        saldo_atual = dados_saldo.get("saldo_atual", 0.0)
+        total_entradas = dados_saldo.get("total_entradas", 0.0)
+        total_saidas = dados_saldo.get("total_saidas", 0.0)
+        saldo_inicial = dados_saldo.get("saldo_inicial", 0.0)
+    except Exception as e:
+        print(f"Erro ao carregar saldo: {e}")
+        saldo_atual = 0.0
+        total_entradas = 0.0
+        total_saidas = 0.0
+        saldo_inicial = 0.0
 
     # --- Renderização Condicional de Cor do Saldo ---
     cor_saldo = CORES["primaria"] if saldo_atual >= 0 else CORES["erro"]
@@ -118,8 +125,8 @@ def build_home(page: ft.Page) -> ft.Column:
     alerta_config = ft.Container()
     if saldo_inicial == 0 and total_entradas == 0 and total_saidas == 0:
         def ir_para_configuracao(e):
-            from main import carregar_view_externa
-            carregar_view_externa(page, "configuracao")
+            if on_config_click:
+                on_config_click()
             
         alerta_config = criar_card(
             ft.Column(
@@ -130,7 +137,7 @@ def build_home(page: ft.Page) -> ft.Column:
                         size=13, color=CORES["texto_secundario"], text_align=ft.TextAlign.CENTER
                     ),
                     ft.FilledButton(
-                        content="Configurar Agora",
+                        text="Configurar Agora",
                         icon=ft.Icons.SETTINGS,
                         on_click=ir_para_configuracao,
                         bgcolor=CORES["primaria_surface"],

@@ -6,11 +6,12 @@ Utiliza fpdf2 para criar um relatório financeiro profissional.
 import os
 from datetime import datetime
 from fpdf import FPDF
+import database as db
 
-# Pasta onde os PDFs serão salvos
+# Pasta base do pacote (read-only no Android) para ler fonts
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RELATORIOS_DIR = os.path.join(BASE_DIR, "relatorios")
-
+# Diretório seguro para escrever os dados (storage app user root)
+RELATORIOS_DIR = os.path.join(db.get_safe_data_dir(), "relatorios")
 # Mapeamento de meses em português
 MESES_PT = {
     1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
@@ -33,11 +34,11 @@ class RelatorioPDF(FPDF):
         self.ano = ano
         self.nome_condominio = nome_condominio
         self.set_auto_page_break(auto=True, margin=20)
-        # Usa Arial do Windows com suporte a Unicode (pt-BR)
-        FONTS_W = "C:/Windows/Fonts"
-        self.add_font("Arial", style="", fname=f"{FONTS_W}/arial.ttf", uni=True)
-        self.add_font("Arial", style="B", fname=f"{FONTS_W}/arialbd.ttf", uni=True)
-        self.add_font("Arial", style="I", fname=f"{FONTS_W}/ariali.ttf", uni=True)
+        # Usa fontes da pasta assets para compatibilidade cross-platform (Android/Windows/Mac)
+        assets_dir = os.path.join(BASE_DIR, "assets")
+        self.add_font("Arial", style="", fname=os.path.join(assets_dir, "arial.ttf"), uni=True)
+        self.add_font("Arial", style="B", fname=os.path.join(assets_dir, "arialbd.ttf"), uni=True)
+        self.add_font("Arial", style="I", fname=os.path.join(assets_dir, "ariali.ttf"), uni=True)
         self.add_page()
 
     def header(self):

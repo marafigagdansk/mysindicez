@@ -35,16 +35,9 @@ CORES = {
 # ========================================================
 # Componentes Reutilizáveis
 # ========================================================
-
 def criar_appbar(page: ft.Page, titulo: str) -> ft.AppBar:
-    """Cria a AppBar padrão do app com menu lateral."""
-    def open_drawer(e):
-        if page.drawer:
-            page.drawer.open = True
-            page.update()
-
+    """Cria a AppBar padrão do app com menu lateral dinâmico feito nativamente."""
     return ft.AppBar(
-        leading=ft.IconButton(ft.Icons.MENU, on_click=open_drawer, icon_color=ft.Colors.WHITE),
         title=ft.Text(
             titulo,
             size=20,
@@ -55,7 +48,6 @@ def criar_appbar(page: ft.Page, titulo: str) -> ft.AppBar:
         bgcolor=CORES["primaria"],
         color=ft.Colors.WHITE,
     )
-
 
 def criar_card(conteudo: ft.Control, padding: int = 16) -> ft.Container:
     """Cria um card estilizado com sombra e bordas arredondadas."""
@@ -82,7 +74,8 @@ from views.home import build_home
 
 def view_home(page: ft.Page) -> ft.Column:
     """Dashboard principal (Home) — Passo 5."""
-    return build_home(page)
+    # Passamos lambda anonima limpa para não ter conflito de imports
+    return build_home(page, on_config_click=lambda: carregar_view_externa(page, "configuracao"))
 
 
 from views.transacoes import build_transacoes
@@ -135,105 +128,156 @@ def carregar_view_externa(page, nome: str):
 def main(page: ft.Page):
     """Função principal do app Flet."""
 
-    # --- Configuração da página (simulação mobile no PC) ---
-    page.title = "MySíndice Z"
-    page.window.width = 400
-    page.window.height = 800
-    page.window.resizable = True
-    page.bgcolor = CORES["fundo"]
-    page.padding = 0
-
-    # Inicializa o banco de dados
-    global _conteudo_ref
-    inicializar_banco()
-
-    # --- Container principal que exibirá a view ativa ---
-    conteudo_principal = ft.Container(
-        expand=True,
-        padding=ft.Padding(left=16, right=16, top=8, bottom=8),
-    )
-    _conteudo_ref = conteudo_principal
-
-    # --- Mapeamento de índice para views ---
-    def carregar_view(indice: int):
-        """Carrega a view correspondente ao índice da NavigationBar."""
-        views = {
-            0: ("Home", view_home),
-            1: ("Entradas / Saidas", view_transacoes),
-            2: ("Moradores", view_moradores),
-            3: ("Relatorios", view_relatorios),
-        }
-        titulo, view_func = views.get(indice, ("Home", view_home))
-        page.appbar = criar_appbar(page, titulo)
-        conteudo_principal.content = view_func(page)
+    def mostrar_erro_critico(erro: str):
+        """Exibe uma tela de erro amigável em caso de falha catastrófica."""
+        page.clean()
+        page.add(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Icon(ft.Icons.ERROR_OUTLINE, color=CORES["erro"], size=64),
+                        ft.Text("Erro ao inicializar o App", size=24, weight=ft.FontWeight.BOLD, color=CORES["texto"]),
+                        ft.Text(
+                            "Ocorreu um problema ao carregar os dados ou permissões do sistema.",
+                            text_align=ft.TextAlign.CENTER,
+                            color=CORES["texto_secundario"]
+                        ),
+                        ft.Container(
+                            content=ft.Text(f"Detalhes: {erro}", size=11, color=CORES["erro"], font_family="monospace"),
+                            padding=15,
+                            bgcolor=ft.Colors.GREY_100,
+                            border_radius=8,
+                        ),
+                        ft.FilledButton(
+                            "Tentar Novamente", 
+                            icon=ft.Icons.REFRESH,
+                            on_click=lambda _: page.window_destroy() if hasattr(page, "window_destroy") else None
+                        )
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=20,
+                ),
+                alignment=ft.Alignment.CENTER,
+                expand=True,
+                padding=40,
+            )
+        )
         page.update()
 
-    # --- NavigationBar inferior ---
-    def on_nav_change(e):
-        """Callback de troca de aba na barra de navegação."""
-        carregar_view(e.control.selected_index)
+    try:
+        # --- Configuração da página (simulação mobile no PC + System UI Android) ---
+        page.title = "MySíndice Z"
+        
+        # Só define tamanho se for desktop para não interferir no mobile
+        if page.platform not in [ft.PagePlatform.ANDROID, ft.PagePlatform.IOS]:
+            page.window.width = 400
+            page.window.height = 800
+            page.window.resizable = True
+        
+        page.bgcolor = CORES["fundo"]
+        page.padding = 0
+        
+        # Configuração para que a NavigationBar do app conviva com a do sistema Android
+        page.theme = ft.Theme(
+            system_overlay_style=ft.SystemOverlayStyle(
+                system_navigation_bar_color=ft.Colors.TRANSPARENT,
+                system_navigation_bar_divider_color=ft.Colors.TRANSPARENT,
+            ),
+        )
 
-    nav_bar = ft.NavigationBar(
-        selected_index=0,
-        on_change=on_nav_change,
-        bgcolor=CORES["nav_bg"],
-        indicator_color=CORES["primaria_surface"],
-        shadow_color=ft.Colors.BLACK,
-        elevation=8,
-        height=65,
-        label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
-        destinations=[
-            ft.NavigationBarDestination(
-                icon=ft.Icons.HOME_OUTLINED,
-                selected_icon=ft.Icons.HOME,
-                label="Home",
-            ),
-            ft.NavigationBarDestination(
-                icon=ft.Icons.SWAP_HORIZ_OUTLINED,
-                selected_icon=ft.Icons.SWAP_HORIZ,
-                label="Transações",
-            ),
-            ft.NavigationBarDestination(
-                icon=ft.Icons.PEOPLE_OUTLINE,
-                selected_icon=ft.Icons.PEOPLE,
-                label="Moradores",
-            ),
-            ft.NavigationBarDestination(
-                icon=ft.Icons.DESCRIPTION_OUTLINED,
-                selected_icon=ft.Icons.DESCRIPTION,
-                label="Relatórios",
-            ),
-        ],
-    )
+        # Inicializa o banco de dados
+        global _conteudo_ref
+        inicializar_banco()
 
-    # --- Navigation Drawer Lateral ---
-    def on_drawer_change(e):
-        # Desmarca o drawer para ficar limpo visualmente no re-open
-        e.control.selected_index = None
-        # O índice 0 corresponde a "Configurações"
-        carregar_view_externa(page, "configuracao")
-        page.drawer.open = False
+        # --- Container principal que exibirá a view ativa ---
+        conteudo_principal = ft.Container(
+            expand=True,
+            padding=ft.Padding(left=16, right=16, top=8, bottom=8),
+        )
+        _conteudo_ref = conteudo_principal
+
+        # --- Mapeamento de índice para views ---
+        def carregar_view(indice: int):
+            """Carrega a view correspondente ao índice da NavigationBar."""
+            views = {
+                0: ("Home", view_home),
+                1: ("Entradas / Saídas", view_transacoes),
+                2: ("Moradores", view_moradores),
+                3: ("Relatórios", view_relatorios),
+            }
+            titulo, view_func = views.get(indice, ("Home", view_home))
+            page.appbar = criar_appbar(page, titulo)
+            conteudo_principal.content = view_func(page)
+            page.update()
+
+        # --- NavigationBar inferior ---
+        def on_nav_change(e):
+            """Callback de troca de aba na barra de navegação."""
+            carregar_view(e.control.selected_index)
+            
+        nav_bar = ft.NavigationBar(
+            selected_index=0,
+            on_change=on_nav_change,
+            bgcolor=ft.Colors.with_opacity(0.92, CORES["nav_bg"]), 
+            indicator_color=CORES["primaria_surface"],
+            elevation=0, 
+            adaptive=True,
+            label_behavior=ft.NavigationBarLabelBehavior.ALWAYS_SHOW,
+            destinations=[
+                ft.NavigationBarDestination(
+                    icon=ft.Icons.HOME_OUTLINED,
+                    selected_icon=ft.Icons.HOME,
+                    label="Home",
+                ),
+                ft.NavigationBarDestination(
+                    icon=ft.Icons.SWAP_HORIZ_OUTLINED,
+                    selected_icon=ft.Icons.SWAP_HORIZ,
+                    label="Transações",
+                ),
+                ft.NavigationBarDestination(
+                    icon=ft.Icons.PEOPLE_OUTLINE,
+                    selected_icon=ft.Icons.PEOPLE,
+                    label="Moradores",
+                ),
+                ft.NavigationBarDestination(
+                    icon=ft.Icons.DESCRIPTION_OUTLINED,
+                    selected_icon=ft.Icons.DESCRIPTION,
+                    label="Relatórios",
+                ),
+            ],
+        )
+
+        # --- Navigation Drawer Lateral ---
+        def on_drawer_change(e):
+            e.control.selected_index = None
+            carregar_view_externa(page, "configuracao")
+            page.drawer.open = False
+            page.update()
+
+        page.drawer = ft.NavigationDrawer(
+            on_change=on_drawer_change,
+            controls=[
+                ft.Container(height=12),
+                ft.NavigationDrawerDestination(
+                    label="Configurações",
+                    icon=ft.Icons.SETTINGS_OUTLINED,
+                    selected_icon=ft.Icons.SETTINGS,
+                ),
+            ]
+        )
+
+        # --- Layout inicial ---
+        page.appbar = criar_appbar(page, "Home")
+        conteudo_principal.content = view_home(page)
+        page.navigation_bar = nav_bar
+
+        page.add(conteudo_principal)
         page.update()
 
-    page.drawer = ft.NavigationDrawer(
-        on_change=on_drawer_change,
-        controls=[
-            ft.Container(height=12),
-            ft.NavigationDrawerDestination(
-                label="Configurações",
-                icon=ft.Icons.SETTINGS_OUTLINED,
-                selected_icon=ft.Icons.SETTINGS,
-            ),
-        ]
-    )
-
-    # --- Layout principal ---
-    page.appbar = criar_appbar(page, "Home")
-    conteudo_principal.content = view_home(page)
-    page.navigation_bar = nav_bar
-
-    page.add(conteudo_principal)
+    except Exception as ex:
+        mostrar_erro_critico(str(ex))
 
 
-# Inicializa o app Flet
-ft.run(main)
+# Inicializa o app Flet como Aplicativo Nativo / Web
+if __name__ == "__main__":
+    ft.app(target=main)

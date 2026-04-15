@@ -129,7 +129,7 @@ def build_moradores(page: ft.Page) -> ft.Column:
                 campo_unidade.value = morador["unidade"]
                 modo_edicao["ativo"] = True
                 modo_edicao["id"] = morador["id"]
-                btn_salvar.content = "Salvar Alteracoes"
+                btn_salvar.text = "Salvar Alteracoes"
                 btn_salvar.icon = ft.Icons.SAVE
                 abrir_painel()
 
@@ -154,9 +154,9 @@ def build_moradores(page: ft.Page) -> ft.Column:
                         "O histórico de pagamentos será mantido."
                     ),
                     actions=[
-                        ft.TextButton(content="Cancelar", on_click=cancelar),
+                        ft.TextButton(text="Cancelar", on_click=cancelar),
                         ft.FilledButton(
-                            content="Remover",
+                            text="Remover",
                             on_click=confirmar,
                             bgcolor=CORES["erro"],
                             color=ft.Colors.WHITE,
@@ -260,7 +260,7 @@ def build_moradores(page: ft.Page) -> ft.Column:
         campo_unidade.value = ""
         modo_edicao["ativo"] = False
         modo_edicao["id"] = None
-        btn_salvar.content = "Cadastrar Morador"
+        btn_salvar.text = "Cadastrar Morador"
         btn_salvar.icon = ft.Icons.PERSON_ADD
         fechar_painel()
 
@@ -274,13 +274,13 @@ def build_moradores(page: ft.Page) -> ft.Column:
         campo_unidade.error_text = None
         modo_edicao["ativo"] = False
         modo_edicao["id"] = None
-        btn_salvar.content = "Cadastrar Morador"
+        btn_salvar.text = "Cadastrar Morador"
         btn_salvar.icon = ft.Icons.PERSON_ADD
         fechar_painel()
 
     # --- Botões do formulário ---
     btn_salvar = ft.FilledButton(
-        content="Cadastrar Morador",
+        text="Cadastrar Morador",
         icon=ft.Icons.PERSON_ADD,
         on_click=salvar_morador,
         style=ft.ButtonStyle(
@@ -293,7 +293,7 @@ def build_moradores(page: ft.Page) -> ft.Column:
     )
 
     btn_cancelar = ft.OutlinedButton(
-        content="Cancelar",
+        text="Cancelar",
         icon=ft.Icons.CLOSE,
         on_click=cancelar_edicao,
         style=ft.ButtonStyle(

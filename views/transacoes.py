@@ -48,11 +48,9 @@ def criar_card(conteudo: ft.Control, padding=16) -> ft.Container:
         border=ft.Border.all(1, CORES["borda"]),
     )
 
-
-# Dir base
-DB_DIR = os.path.dirname(os.path.abspath(db.__file__))
+# Dir base (diretorio seguro para arquivos graváveis)
+DB_DIR = db.get_safe_data_dir()
 COMPROVANTES_DIR = os.path.join(DB_DIR, "comprovantes")
-
 
 def formatar_brl(valor: float) -> str:
     """Formata um float para o padrão brasileiro R$ 1.234,56"""
@@ -69,6 +67,48 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     # Garante que a pasta existe
     if not os.path.exists(COMPROVANTES_DIR):
         os.makedirs(COMPROVANTES_DIR)
+
+    # Variável interna para guardar o caminho original do arquivo SE selecionado
+    caminho_comprovante_selecionado = [None]  
+
+    texto_comprovante = ft.Text("Nenhum arquivo selecionado.", size=12, color=CORES["texto_secundario"], expand=True)
+
+    # --- Lógica do FilePicker (Resiliente e Lazy) ---
+    # Procura um picker já existente no overlay global para não duplicar IDs
+    file_picker = next((c for c in page.overlay if isinstance(c, ft.FilePicker)), None)
+    
+    if file_picker is None:
+        file_picker = ft.FilePicker()
+        page.overlay.append(file_picker)
+        # Forçamos uma atualização para o Android registrar o controle "invisível"
+        page.update()
+
+    # Convertendo para async def para suportar o novo pick_files do Flet
+    async def processar_dialog(e):
+        try:
+            files = await file_picker.pick_files_async(
+                dialog_title="Selecione o Comprovante",
+                allowed_extensions=["pdf", "png", "jpg", "jpeg"]
+            )
+        except (AttributeError, Exception):
+            files = await file_picker.pick_files(
+                dialog_title="Selecione o Comprovante",
+                allowed_extensions=["pdf", "png", "jpg", "jpeg"]
+            )
+            
+        if files and len(files) > 0:
+            caminho = files[0].path
+            caminho_comprovante_selecionado[0] = caminho
+            texto_comprovante.value = f"Anexado: {os.path.basename(caminho)}"
+            texto_comprovante.color = CORES["sucesso"]
+        else:
+            caminho_comprovante_selecionado[0] = None
+            texto_comprovante.value = "Nenhum arquivo selecionado."
+            texto_comprovante.color = CORES["texto_secundario"]
+        page.update()
+
+    def on_pick_click(e):
+        page.run_task(processar_dialog, e)
 
     # Função para adaptar a UI de acordo com o tipo
     def on_tipo_change(e):
@@ -165,38 +205,10 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         visible=False,
     )
 
-    # Variável interna para guardar o caminho original do arquivo SE selecionado
-    caminho_comprovante_selecionado = [None]  # Usamos uma lista para mutabilidade interna
 
-    texto_comprovante = ft.Text("Nenhum arquivo selecionado.", size=12, color=CORES["texto_secundario"], expand=True)
-
-    def on_pick_click(e):
-        import tkinter as tk
-        from tkinter import filedialog
-        
-        root = tk.Tk()
-        root.attributes("-topmost", True)
-        root.withdraw()
-        
-        caminho = filedialog.askopenfilename(
-            title="Selecione o Comprovante",
-            filetypes=[("Arquivos Permitidos", "*.pdf *.png *.jpg *.jpeg")]
-        )
-        root.destroy()
-
-        if caminho:
-            caminho_comprovante_selecionado[0] = caminho
-            texto_comprovante.value = f"Anexado: {os.path.basename(caminho)}"
-            texto_comprovante.color = CORES["sucesso"]
-        else:
-            caminho_comprovante_selecionado[0] = None
-            texto_comprovante.value = "Nenhum arquivo selecionado."
-            texto_comprovante.color = CORES["texto_secundario"]
-        
-        page.update()
 
     btn_anexar = ft.OutlinedButton(
-        content="Anexar Comprovante",
+        text="Anexar Comprovante",
         icon=ft.Icons.ATTACH_FILE,
         on_click=on_pick_click,
         style=ft.ButtonStyle(
@@ -260,9 +272,9 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                     title=ft.Text("Excluir Transação"),
                     content=ft.Text("Tem certeza que deseja excluir esta transação?"),
                     actions=[
-                        ft.TextButton(content="Cancelar", on_click=cancelar),
+                        ft.TextButton(text="Cancelar", on_click=cancelar),
                         ft.FilledButton(
-                            content="Excluir",
+                            text="Excluir",
                             on_click=confirmar,
                             bgcolor=CORES["erro"],
                             color=ft.Colors.WHITE,
@@ -278,11 +290,19 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                 if path and os.path.exists(path):
                     # Tenta abrir o arquivo usando o sistema operacional
                     try:
-                        os.startfile(path)
-                    except AttributeError:
-                        # Em sistemas diferentes de Windows
-                        import subprocess
-                        subprocess.call(["open", path] if os.name == "mac" else ["xdg-open", path])
+                        if hasattr(os, 'startfile'):
+                            os.startfile(path)
+                        else:
+                            import subprocess
+                            if os.name == "mac":
+                                subprocess.call(["open", path])
+                            else:
+                                subprocess.call(["xdg-open", path])
+                    except Exception as ex:
+                        snack = ft.SnackBar(content=ft.Text(f"Aviso: Nenhuma ação suportada nativamente para abrir. Caminho: {path}"), bgcolor=CORES["aviso"])
+                        snack.open = True
+                        page.overlay.append(snack)
+                        page.update()
                 else:
                     snack = ft.SnackBar(content=ft.Text("Arquivo não encontrado no diretório."), bgcolor=CORES["erro"])
                     snack.open = True
@@ -456,7 +476,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     # Botões e Painel expansível (estilo manual como em moradores)
     btn_salvar = ft.FilledButton(
-        content="Salvar Registro",
+        text="Salvar Registro",
         icon=ft.Icons.SAVE,
         on_click=salvar_transacao,
         style=ft.ButtonStyle(
@@ -475,7 +495,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         fechar_painel()
 
     btn_cancelar = ft.OutlinedButton(
-        content="Cancelar",
+        text="Cancelar",
         icon=ft.Icons.CLOSE,
         on_click=cancelar_form,
         style=ft.ButtonStyle(

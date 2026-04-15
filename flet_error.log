@@ -1,0 +1,9 @@
+Unhandled error in main() handler
+Traceback (most recent call last):
+  File "C:\Users\vinicius.marafiga\Desktop\mysindicez\venv\Lib\site-packages\flet\app.py", line 354, in on_session_created
+    main(session.page)
+    ~~~~^^^^^^^^^^^^^^
+  File "C:\Users\vinicius.marafiga\Desktop\mysindicez\test_sync2.py", line 20, in main
+    page.window_close()
+    ^^^^^^^^^^^^^^^^^
+AttributeError: 'Page' object has no attribute 'window_close'
