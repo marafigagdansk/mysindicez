@@ -154,9 +154,9 @@ def build_moradores(page: ft.Page) -> ft.Column:
                         "O histórico de pagamentos será mantido."
                     ),
                     actions=[
-                        ft.TextButton(text="Cancelar", on_click=cancelar),
+                        ft.TextButton("Cancelar", on_click=cancelar),
                         ft.FilledButton(
-                            text="Remover",
+                            "Remover",
                             on_click=confirmar,
                             bgcolor=CORES["erro"],
                             color=ft.Colors.WHITE,
@@ -280,7 +280,7 @@ def build_moradores(page: ft.Page) -> ft.Column:
 
     # --- Botões do formulário ---
     btn_salvar = ft.FilledButton(
-        text="Cadastrar Morador",
+        "Cadastrar Morador",
         icon=ft.Icons.PERSON_ADD,
         on_click=salvar_morador,
         style=ft.ButtonStyle(
@@ -293,7 +293,7 @@ def build_moradores(page: ft.Page) -> ft.Column:
     )
 
     btn_cancelar = ft.OutlinedButton(
-        text="Cancelar",
+        "Cancelar",
         icon=ft.Icons.CLOSE,
         on_click=cancelar_edicao,
         style=ft.ButtonStyle(

@@ -137,7 +137,7 @@ def build_home(page: ft.Page, on_config_click=None) -> ft.Column:
                         size=13, color=CORES["texto_secundario"], text_align=ft.TextAlign.CENTER
                     ),
                     ft.FilledButton(
-                        text="Configurar Agora",
+                        "Configurar Agora",
                         icon=ft.Icons.SETTINGS,
                         on_click=ir_para_configuracao,
                         bgcolor=CORES["primaria_surface"],

@@ -260,7 +260,7 @@ def build_relatorios(page: ft.Page) -> ft.Column:
         page.update()
 
     btn_gerar = ft.FilledButton(
-        text="Gerar Relatório PDF",
+        "Gerar Relatório PDF",
         icon=ft.Icons.PICTURE_AS_PDF,
         on_click=gerar_pdf,
         style=ft.ButtonStyle(

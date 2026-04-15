@@ -73,14 +73,18 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     texto_comprovante = ft.Text("Nenhum arquivo selecionado.", size=12, color=CORES["texto_secundario"], expand=True)
 
-    # --- Lógica do FilePicker (Resiliente e Lazy) ---
-    # Procura um picker já existente no overlay global para não duplicar IDs
-    file_picker = next((c for c in page.overlay if isinstance(c, ft.FilePicker)), None)
+    # --- Lógica do FilePicker (Resiliente e Mobile-First) ---
+    # Busca um FilePicker existente no overlay para evitar conflitos de IDs no Android
+    file_picker = None
+    for control in page.overlay:
+        if isinstance(control, ft.FilePicker):
+            file_picker = control
+            break
     
     if file_picker is None:
         file_picker = ft.FilePicker()
         page.overlay.append(file_picker)
-        # Forçamos uma atualização para o Android registrar o controle "invisível"
+        # O update é vital aqui para o Android registrar o componente antes da primeira iteração
         page.update()
 
     # Convertendo para async def para suportar o novo pick_files do Flet
@@ -115,12 +119,12 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         valor_selecionado = e.control.value
         if valor_selecionado == "entrada_mensalidade":
             campo_morador.visible = True
-            campo_morador.label = "Vincular a um Morador (Obrigatório)"
+            campo_morador.label = "Morador (Obrigatório)"
             if not campo_descricao.value:
                 campo_descricao.value = "Mensalidade"
         elif valor_selecionado == "entrada":
             campo_morador.visible = True
-            campo_morador.label = "Vincular a um Morador (Opcional)"
+            campo_morador.label = "Morador (Opcional)"
         else:
             campo_morador.visible = False
             
@@ -208,7 +212,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
 
     btn_anexar = ft.OutlinedButton(
-        text="Anexar Comprovante",
+        "Anexar Comprovante",
         icon=ft.Icons.ATTACH_FILE,
         on_click=on_pick_click,
         style=ft.ButtonStyle(
@@ -272,9 +276,9 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                     title=ft.Text("Excluir Transação"),
                     content=ft.Text("Tem certeza que deseja excluir esta transação?"),
                     actions=[
-                        ft.TextButton(text="Cancelar", on_click=cancelar),
+                        ft.TextButton("Cancelar", on_click=cancelar),
                         ft.FilledButton(
-                            text="Excluir",
+                            "Excluir",
                             on_click=confirmar,
                             bgcolor=CORES["erro"],
                             color=ft.Colors.WHITE,
@@ -476,7 +480,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     # Botões e Painel expansível (estilo manual como em moradores)
     btn_salvar = ft.FilledButton(
-        text="Salvar Registro",
+        "Salvar Registro",
         icon=ft.Icons.SAVE,
         on_click=salvar_transacao,
         style=ft.ButtonStyle(
@@ -495,7 +499,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
         fechar_painel()
 
     btn_cancelar = ft.OutlinedButton(
-        text="Cancelar",
+        "Cancelar",
         icon=ft.Icons.CLOSE,
         on_click=cancelar_form,
         style=ft.ButtonStyle(

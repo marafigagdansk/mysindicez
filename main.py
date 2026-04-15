@@ -151,7 +151,7 @@ def main(page: ft.Page):
                         ft.FilledButton(
                             "Tentar Novamente", 
                             icon=ft.Icons.REFRESH,
-                            on_click=lambda _: page.window_destroy() if hasattr(page, "window_destroy") else None
+                            on_click=lambda _: page.window.close() if hasattr(page, "window") else None
                         )
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,

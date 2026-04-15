@@ -151,7 +151,7 @@ def build_configuracao(page: ft.Page, on_salvo=None) -> ft.Column:
         page.update()
 
     btn_salvar = ft.FilledButton(
-        text="Salvar Saldo",
+        "Salvar Saldo",
         icon=ft.Icons.SAVE,
         on_click=salvar_saldo,
         style=ft.ButtonStyle(
