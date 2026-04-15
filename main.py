@@ -165,6 +165,12 @@ def main(page: ft.Page):
         page.update()
 
     try:
+        # --- Instanciação Global de Controles (Prevenção de Erros no Android) ---
+        picker_global = ft.FilePicker()
+        page.overlay.append(picker_global)
+        page.file_picker_global = picker_global # Injetado para acesso facilitado nas views
+        page.update() # Garante o registro imediato no Android
+        
         # --- Configuração da página (simulação mobile no PC + System UI Android) ---
         page.title = "MySíndice Z"
         
@@ -199,16 +205,19 @@ def main(page: ft.Page):
         # --- Mapeamento de índice para views ---
         def carregar_view(indice: int):
             """Carrega a view correspondente ao índice da NavigationBar."""
-            views = {
-                0: ("Home", view_home),
-                1: ("Entradas / Saídas", view_transacoes),
-                2: ("Moradores", view_moradores),
-                3: ("Relatórios", view_relatorios),
-            }
-            titulo, view_func = views.get(indice, ("Home", view_home))
-            page.appbar = criar_appbar(page, titulo)
-            conteudo_principal.content = view_func(page)
-            page.update()
+            try:
+                views = {
+                    0: ("Home", view_home),
+                    1: ("Entradas / Saídas", view_transacoes),
+                    2: ("Moradores", view_moradores),
+                    3: ("Relatórios", view_relatorios),
+                }
+                titulo, view_func = views.get(indice, ("Home", view_home))
+                page.appbar = criar_appbar(page, titulo)
+                conteudo_principal.content = view_func(page)
+                page.update()
+            except Exception as ex:
+                mostrar_erro_critico(f"Erro ao carregar view {indice}: {str(ex)}")
 
         # --- NavigationBar inferior ---
         def on_nav_change(e):

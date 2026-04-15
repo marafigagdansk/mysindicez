@@ -64,7 +64,15 @@ def limpar_valor(texto: str) -> float:
 
 
 def build_transacoes(page: ft.Page) -> ft.Column:
-    # Garante que a pasta existe
+    # --- Segurança: Verificação do FilePicker Global ---
+    if not hasattr(page, "file_picker_global") or page.file_picker_global is None:
+        # Se por algum erro de inicialização não existir, tenta criar localmente como fallback (menos ideal para Android)
+        if not any(isinstance(x, ft.FilePicker) for x in page.overlay):
+            page.file_picker_global = ft.FilePicker()
+            page.overlay.append(page.file_picker_global)
+            page.update()
+
+    # Garante que a pasta de comprovantes existe
     if not os.path.exists(COMPROVANTES_DIR):
         os.makedirs(COMPROVANTES_DIR)
 
@@ -73,46 +81,32 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     texto_comprovante = ft.Text("Nenhum arquivo selecionado.", size=12, color=CORES["texto_secundario"], expand=True)
 
-    # --- Lógica do FilePicker (Resiliente e Mobile-First) ---
-    # Busca um FilePicker existente no overlay para evitar conflitos de IDs no Android
-    file_picker = None
-    for control in page.overlay:
-        if isinstance(control, ft.FilePicker):
-            file_picker = control
-            break
-    
-    if file_picker is None:
-        file_picker = ft.FilePicker()
-        page.overlay.append(file_picker)
-        # O update é vital aqui para o Android registrar o componente antes da primeira iteração
-        page.update()
-
-    # Convertendo para async def para suportar o novo pick_files do Flet
-    async def processar_dialog(e):
+    # --- Lógica do FilePicker Global (Refatorada para evitar vazamentos) ---
+    def on_file_result(e: ft.FilePickerResultEvent):
         try:
-            files = await file_picker.pick_files_async(
-                dialog_title="Selecione o Comprovante",
-                allowed_extensions=["pdf", "png", "jpg", "jpeg"]
-            )
-        except (AttributeError, Exception):
-            files = await file_picker.pick_files(
-                dialog_title="Selecione o Comprovante",
-                allowed_extensions=["pdf", "png", "jpg", "jpeg"]
-            )
-            
-        if files and len(files) > 0:
-            caminho = files[0].path
-            caminho_comprovante_selecionado[0] = caminho
-            texto_comprovante.value = f"Anexado: {os.path.basename(caminho)}"
-            texto_comprovante.color = CORES["sucesso"]
-        else:
-            caminho_comprovante_selecionado[0] = None
-            texto_comprovante.value = "Nenhum arquivo selecionado."
-            texto_comprovante.color = CORES["texto_secundario"]
-        page.update()
+            if e.files:
+                caminho = e.files[0].path
+                caminho_comprovante_selecionado[0] = caminho
+                texto_comprovante.value = f"Anexo: {os.path.basename(caminho)}"
+                texto_comprovante.color = CORES["sucesso"]
+            else:
+                # Caso o usuário cancele, mantemos o que já estava ou limpamos se for desejo
+                # Aqui optamos por não limpar caso ele já tenha selecionado algo antes e apenas cancelou o novo diálogo
+                if not caminho_comprovante_selecionado[0]:
+                    texto_comprovante.value = "Nenhum arquivo selecionado."
+                    texto_comprovante.color = CORES["texto_secundario"]
+            page.update()
+        except Exception as ex:
+            print(f"Erro no callback do FilePicker: {ex}")
+
+    # Atribui o callback garantindo que não sobrescrevemos logica de outras views se compartilhado
+    page.file_picker_global.on_result = on_file_result
 
     def on_pick_click(e):
-        page.run_task(processar_dialog, e)
+        page.file_picker_global.pick_files(
+            dialog_title="Selecione o Comprovante",
+            allowed_extensions=["pdf", "png", "jpg", "jpeg"]
+        )
 
     # Função para adaptar a UI de acordo com o tipo
     def on_tipo_change(e):
@@ -249,6 +243,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
                     padding=32,
                 )
             )
+            page.update() # Garante atualização da lista vazia
             return
 
         for t in transacoes:
@@ -340,10 +335,15 @@ def build_transacoes(page: ft.Page) -> ft.Column:
             except:
                 data_exibicao = t["data"]
 
-            # Subtítulo (Data e Morador se houver)
+            # Subtítulo (Data e Morador se houver) com tratamento de nulos
             sub_partes = [data_exibicao]
-            if t["morador_nome"]:
-                sub_partes.append(f"{t['morador_nome']} (Un. {t['morador_unidade']})")
+            morador_nome = t.get("morador_nome") or ""
+            unidade = t.get("morador_unidade") or ""
+            
+            if morador_nome:
+                sub_partes.append(f"{morador_nome} (Un. {unidade})")
+            elif t.get("morador_id"):
+                sub_partes.append(f"Morador ID: {t['morador_id']}")
 
             card = ft.Container(
                 content=ft.Row(
