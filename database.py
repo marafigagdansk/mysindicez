@@ -112,6 +112,20 @@ def inicializar_banco():
     print("[OK] Banco de dados inicializado com sucesso!")
 
 
+def limpar_banco_de_dados():
+    """Limpa todas as tabelas (transações, moradores, configurações) e recria o banco limpo."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA foreign_keys = OFF")
+    cursor.execute("DROP TABLE IF EXISTS transacoes")
+    cursor.execute("DROP TABLE IF EXISTS moradores")
+    cursor.execute("DROP TABLE IF EXISTS configuracoes")
+    conn.commit()
+    conn.close()
+    inicializar_banco()
+    print("[OK] Banco de dados limpo com sucesso!")
+
+
 # ========================================================
 # CRUD - Configurações
 # ========================================================

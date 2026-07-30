@@ -165,9 +165,9 @@ def main(page: ft.Page):
         page.update()
 
     try:
-        # --- Instanciação Global de Controles (Prevenção de Erros no Android) ---
+        # --- Instanciação Global de Serviços ---
         picker_global = ft.FilePicker()
-        page.overlay.append(picker_global)
+        page.services.append(picker_global)
         page.file_picker_global = picker_global # Injetado para acesso facilitado nas views
         page.update() # Garante o registro imediato no Android
         
@@ -289,4 +289,4 @@ def main(page: ft.Page):
 
 # Inicializa o app Flet como Aplicativo Nativo / Web
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.run(main)

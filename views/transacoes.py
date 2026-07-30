@@ -67,9 +67,9 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     # --- Segurança: Verificação do FilePicker Global ---
     if not hasattr(page, "file_picker_global") or page.file_picker_global is None:
         # Se por algum erro de inicialização não existir, tenta criar localmente como fallback (menos ideal para Android)
-        if not any(isinstance(x, ft.FilePicker) for x in page.overlay):
+        if not any(isinstance(x, ft.FilePicker) for x in page.services):
             page.file_picker_global = ft.FilePicker()
-            page.overlay.append(page.file_picker_global)
+            page.services.append(page.file_picker_global)
             page.update()
 
     # Garante que a pasta de comprovantes existe
@@ -82,7 +82,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     texto_comprovante = ft.Text("Nenhum arquivo selecionado.", size=12, color=CORES["texto_secundario"], expand=True)
 
     # --- Lógica do FilePicker Global (Refatorada para evitar vazamentos) ---
-    def on_file_result(e: ft.FilePickerResultEvent):
+    def on_file_result(e):
         try:
             if e.files:
                 caminho = e.files[0].path
@@ -102,31 +102,32 @@ def build_transacoes(page: ft.Page) -> ft.Column:
     # Atribui o callback garantindo que não sobrescrevemos logica de outras views se compartilhado
     page.file_picker_global.on_result = on_file_result
 
-    def on_pick_click(e):
-        page.file_picker_global.pick_files(
+    async def on_pick_click(e):
+        await page.file_picker_global.pick_files(
             dialog_title="Selecione o Comprovante",
             allowed_extensions=["pdf", "png", "jpg", "jpeg"]
         )
 
     # Função para adaptar a UI de acordo com o tipo
-    def on_tipo_change(e):
-        valor_selecionado = e.control.value
+    def on_tipo_change(e=None):
+        valor_selecionado = campo_tipo.value
         if valor_selecionado == "entrada_mensalidade":
             campo_morador.visible = True
             campo_morador.label = "Morador (Obrigatório)"
-            if not campo_descricao.value:
+            if not campo_descricao.value or campo_descricao.value == "Mensalidade":
                 campo_descricao.value = "Mensalidade"
-        elif valor_selecionado == "entrada":
-            campo_morador.visible = True
-            campo_morador.label = "Morador (Opcional)"
         else:
             campo_morador.visible = False
+            campo_morador.value = None
+            if campo_descricao.value == "Mensalidade":
+                campo_descricao.value = ""
             
         page.update()
 
     # --- Controles do Formulário ---
     campo_tipo = ft.Dropdown(
         label="Sinal / Tipo",
+        value="entrada_mensalidade",
         options=[
             ft.dropdown.Option("entrada_mensalidade", "Mensalidade (Receita)"),
             ft.dropdown.Option("entrada", "Outras Entradas (Receitas)"),
@@ -152,6 +153,7 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     campo_descricao = ft.TextField(
         label="Descrição",
+        value="Mensalidade",
         hint_text="Ex: Mensalidade, Manutenção",
         border_radius=10,
         border_color=CORES["borda"],
@@ -194,13 +196,13 @@ def build_transacoes(page: ft.Page) -> ft.Column:
 
     # Dropdown de Moradores (preenchido na carga local)
     campo_morador = ft.Dropdown(
-        label="Vincular a um Morador (Opcional)",
+        label="Morador (Obrigatório)",
         options=[],
         border_radius=10,
         border_color=CORES["borda"],
         focused_border_color=CORES["primaria_light"],
         expand=True,
-        visible=False,
+        visible=True,
     )
 
 

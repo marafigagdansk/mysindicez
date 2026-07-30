@@ -251,12 +251,17 @@ def build_configuracao(page: ft.Page, on_salvo=None) -> ft.Column:
     campo_senha.on_change = limpar_erro_senha
 
     def on_desbloquear(e):
-        if campo_senha.value != "vini1612hjv":
-            campo_senha.error_text = "Senha incorreta"
+        if not campo_senha.value or campo_senha.value != "vini1612hjv":
+            campo_senha.error_text = "Senha incorreta! Tente novamente."
+            criar_snackbar(page, "Senha incorreta! Tente novamente.", erro=True)
         else:
+            campo_senha.error_text = None
             area_senha.visible = False
             area_edicao.visible = True
+            criar_snackbar(page, "Acesso liberado!")
         page.update()
+
+    campo_senha.on_submit = on_desbloquear
 
     area_senha.controls.append(
         ft.Row([

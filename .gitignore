@@ -20,7 +20,11 @@ relatorios/
 *.swp
 *.swo
 
+# Logs
+*.log
+
 # Build (Flet / PyInstaller)
 build/
 dist/
 *.spec
+.DS_Store
